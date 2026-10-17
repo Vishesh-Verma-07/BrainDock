@@ -37,7 +37,7 @@ Live deployment: [secondbrain.visheshxdevs.in](https://secondbrain.visheshxdevs.
 
 ```mermaid
 flowchart LR
-    User[User] --> Web[Next.js frontend\nfrontend-updated]
+    User[User] --> Web[Next.js frontend\nfrontend]
     Web -->|REST API / cookies| API[Express API]
     API --> MongoDB[(MongoDB)]
     API -->|Create embeddings and answers| Gemini[Google Gemini]
@@ -58,20 +58,19 @@ flowchart LR
 │   │   └── utility/            # Shared helpers and response utilities
 │   ├── Dockerfile
 │   └── package.json
-├── frontend-updated/           # Active Next.js frontend
+├── frontend/                   # Next.js frontend
 │   ├── src/app/                # Pages, layouts, and styles
 │   ├── src/components/         # Reusable UI components
 │   ├── src/lib/api.ts          # Frontend API client
 │   ├── public/                 # Static assets
 │   ├── Dockerfile
 │   └── package.json
-├── frontend-new/               # Previous Next.js frontend (kept for reference, not active)
 ├── kubernetes/                 # Namespace, services, deployments, ingress
 ├── .github/workflows/ci.yml    # Continuous integration workflow
 └── docker-compose.yml          # Local multi-container setup
 ```
 
-> The active frontend is `frontend-updated/`. The older `frontend-new/` is retained for reference and is no longer built or deployed. The legacy Vite `frontend/` directory has been removed.
+> The active frontend is `frontend/`. The legacy Vite app and the intermediate `frontend-new/` directory have both been removed.
 
 ## Installation
 
@@ -91,7 +90,7 @@ cd SecondBrain
 cd backend
 npm install
 
-cd ../frontend-updated
+cd ../frontend
 npm install
 ```
 
@@ -116,7 +115,7 @@ PINECONE_INDEX_NAME=your-index-name
 PINECONE_URL=your-index-host-url
 ```
 
-Create `frontend-updated/.env`:
+Create `frontend/.env`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
@@ -134,7 +133,7 @@ cd backend
 npm run dev
 
 # Terminal 2
-cd frontend-updated
+cd frontend
 npm run dev
 ```
 
@@ -152,7 +151,7 @@ The frontend is exposed at `http://localhost:3000`, the API at `http://localhost
 
 ## Automation
 
-GitHub Actions runs on pushes and pull requests to `main`. It installs dependencies, lints, and builds both `backend/` and `frontend-updated/` using Node.js 20.
+GitHub Actions runs on pushes and pull requests to `main`. It installs dependencies, lints, and builds both `backend/` and `frontend/` using Node.js 20.
 
 ## Example Output
 
@@ -176,7 +175,7 @@ Example response:
 
 ## Configuration
 
-- **Frontend API URL:** Set `NEXT_PUBLIC_API_URL` in `frontend-updated/.env`.
+- **Frontend API URL:** Set `NEXT_PUBLIC_API_URL` in `frontend/.env`.
 - **Backend port:** Set `PORT` in `backend/.env`; Docker Compose uses port `8080`.
 - **Allowed origins:** Update the `allowedOrigins` list in `backend/src/index.ts` when deploying the frontend to another domain.
 - **Deployment manifests:** Kubernetes configuration is in `kubernetes/`, with ingress routing `/api` to the backend and all other traffic to the frontend.
