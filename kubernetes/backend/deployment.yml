@@ -22,7 +22,7 @@ spec:
         - name: backend
           image: visheshverma07/second-brain-backend:IMAGE_TAG
 
-          ports
+          ports:
             - containerPort: 8080
 
           envFrom: 

@@ -54,8 +54,21 @@ router.use("/api/v1/tags", TagRouter);
 
 app.use(router);
 
-connectDb();
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-  console.log("backend started");
-});
+const PORT = process.env.PORT ?? 8080;
+
+async function start() {
+  try {
+    await connectDb();
+    app.listen(PORT, () => {
+      console.log(`backend started on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error(
+      "Failed to connect to MongoDB, shutting down:",
+      error instanceof Error ? error.message : error,
+    );
+    process.exit(1);
+  }
+}
+
+start();
