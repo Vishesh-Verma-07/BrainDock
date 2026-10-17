@@ -1,0 +1,56 @@
+.share-scope {
+  margin-top: 28px;
+  padding: 22px;
+  border: 1px solid #e3e1da;
+  border-radius: 7px;
+  background: #fff;
+}
+.share-scope h2 {
+  font:
+    24px Georgia,
+    serif;
+  margin: 0 0 16px;
+}
+.share-scope label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.share-scope label.scope-active {
+  border-color: #b9d0bb;
+  background: #f3f8f1;
+}
+.share-scope input {
+  accent-color: #688d71;
+  margin-top: 3px;
+}
+.share-scope strong,
+.share-scope small {
+  display: block;
+}
+.share-scope strong {
+  font-size: 13px;
+}
+.share-scope small {
+  font-size: 11px;
+  color: #728078;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+.scope-unavailable {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+.share-panel p {
+  font-size: 11px;
+  color: #728078;
+  margin: 6px 0 0;
+}
+.share-panel .button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

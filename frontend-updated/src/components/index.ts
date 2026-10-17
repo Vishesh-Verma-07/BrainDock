@@ -1,0 +1,1 @@
+export { BrainDockMockup } from "@/components/brain-dock-mockup";
