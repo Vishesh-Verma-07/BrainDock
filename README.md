@@ -154,14 +154,32 @@ Google sign-in uses the OAuth 2.0 authorization-code flow. The browser is redire
 
 ### Production notes
 
-The current deployment runs the API on Render and the frontend on its own host, so the two are different sites. Two values must therefore be set carefully:
+The current deployment runs the API on Render and the frontend on its own host, so the two are different sites. Pick **one** of the two layouts below; do not mix them, because the Google callback and the API requests must use the same host.
 
-- `GOOGLE_CALLBACK_URL` must be the **backend's** public URL, i.e. the Render service URL — not the frontend domain. It must also be listed verbatim in Google Cloud Console → **Authorized redirect URIs**. Example: `https://<your-service>.onrender.com/api/v1/user/google/callback`.
-- `FRONTEND_URL` must be the frontend's public URL, because the backend redirects the browser there after a successful login (and back to `/login?error=google` on failure).
-- Render sets `NODE_ENV=production` automatically at runtime. In that mode the session cookie is issued with `Secure; SameSite=None`, which is required for the cross-site cookie to be sent from the frontend origin, and `JWT_SECRETE` must be present or the server refuses to start.
-- The frontend origin must be in `allowedOrigins` in `backend/src/index.ts` (CORS with credentials), or added through the `CORS_ORIGINS` environment variable (comma separated).
+**Option A — call the Render API directly (zero repo changes)**
+
+- `GOOGLE_CALLBACK_URL=https://<your-service>.onrender.com/api/v1/user/google/callback`
+- `FRONTEND_URL=https://<your-frontend-domain>`
+- Add `https://<your-service>.onrender.com/api/v1/user/google/callback` to Google Cloud Console → **Authorized redirect URIs**.
+- Set `CORS_ORIGINS=https://<your-frontend-domain>` so credentialed requests are allowed.
+- The session cookie is cross-site here. It works in Chrome and Firefox, but Safari's tracking prevention may drop it.
+
+**Option B — proxy the API through the frontend domain (recommended)**
+
+Everything stays on one site, which makes the session cookie first-party and avoids Safari issues.
+
+- Set `API_PROXY_TARGET=https://<your-service>.onrender.com` (no trailing slash) and `NEXT_PUBLIC_API_URL=/api/v1` in the frontend's build environment, then redeploy. `next.config.ts` forwards `/api/*` to Render.
+- `GOOGLE_CALLBACK_URL=https://<your-frontend-domain>/api/v1/user/google/callback`
+- `FRONTEND_URL=https://<your-frontend-domain>`
+- Add that same callback URL to Google Cloud Console → **Authorized redirect URIs**.
+- No `CORS_ORIGINS` entry is needed, since requests are same-origin.
+
+> **Symptom of a mismatched setup:** after choosing a Google account you land on a **404 "This page wandered off"** page at `/api/v1/user/google/callback?...`, and clicking **Go to dashboard** bounces you to `/login`. That means the callback URL points at the frontend host but `/api` is not being proxied to the backend, so the code exchange never happens. Fix it with Option A or Option B above.
+
+Other requirements:
+
+- Render sets `NODE_ENV=production` automatically at runtime. In that mode the session cookie is issued with `Secure; SameSite=None`, which requires HTTPS, and `JWT_SECRETE` must be present or the server refuses to start.
 - Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`, and `FRONTEND_URL` to the Render environment variables. `GOOGLE_CALLBACK_URL` and `FRONTEND_URL` can also live in `kubernetes/backend/config.yml` for the Kubernetes manifests, which use the ingress domain instead of Render.
-- Because the frontend and API are on different sites, Safari's tracking prevention may block the session cookie. Serving the API from the same site as the frontend (for example a Vercel rewrite of `/api/*` to the Render service, with `NEXT_PUBLIC_API_URL=/api/v1`) makes the cookie first-party and avoids this.
 - Accounts created with Google have no password. Signing in with a password for such an account returns a message pointing the user to Google. Existing password accounts are linked automatically the first time the user signs in with the same verified Google email.
 
 ## Usage
