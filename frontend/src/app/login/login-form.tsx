@@ -8,16 +8,22 @@ import { authApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { AuthError, AuthField } from "@/components/auth/auth-field";
-import { AuthDivider, GoogleButton } from "@/components/auth/google-button";
+import {
+  AuthDivider,
+  GoogleButton,
+  googleErrorMessage,
+} from "@/components/auth/google-button";
 
 export function LoginForm({
   googleFailed = false,
+  googleReason = "",
 }: {
   googleFailed?: boolean;
+  googleReason?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState(
-    googleFailed ? "Google sign-in didn't complete. Please try again." : "",
+    googleFailed ? googleErrorMessage(googleReason, "in") : "",
   );
   const [loading, setLoading] = useState(false);
 

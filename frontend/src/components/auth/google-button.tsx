@@ -53,6 +53,16 @@ export function GoogleButton({
   );
 }
 
+/** Maps the coarse `reason` code from the OAuth callback to a user message. */
+export function googleErrorMessage(reason: string, mode: "in" | "up") {
+  if (reason === "cancelled") return "Google sign-in was cancelled.";
+  if (reason === "state")
+    return "Google sign-in expired before it finished. Please try again.";
+  if (reason === "config")
+    return "Google sign-in isn't available right now. Please try again later.";
+  return `Google sign-${mode} didn't complete. Please try again.`;
+}
+
 export function AuthDivider() {
   return (
     <div className="flex items-center gap-3" aria-hidden>

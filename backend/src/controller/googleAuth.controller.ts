@@ -43,16 +43,24 @@ function requireGoogleConfig() {
  * local development working without extra configuration.
  */
 function callbackUrl(req: Request) {
-  if (process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
+  const configured = process.env.GOOGLE_CALLBACK_URL?.trim();
+  if (configured) return configured.replace(/\/+$/, "");
   return `${req.protocol}://${req.get("host")}/api/v1/user/google/callback`;
 }
 
 function frontendUrl() {
-  return process.env.FRONTEND_URL || "http://localhost:3000";
+  return (process.env.FRONTEND_URL || "http://localhost:3000")
+    .trim()
+    .replace(/\/+$/, "");
 }
 
-function frontendError(returnTo: string) {
-  return `${frontendUrl()}${returnTo}?error=google`;
+/**
+ * `reason` is a coarse code (never an error message) so the login page can
+ * show something useful without leaking server details.
+ */
+function frontendError(returnTo: string, reason: string) {
+  const separator = returnTo.includes("?") ? "&" : "?";
+  return `${frontendUrl()}${returnTo}${separator}error=google&reason=${encodeURIComponent(reason)}`;
 }
 
 /** Short-lived signed value that protects the OAuth redirect against CSRF. */
@@ -210,7 +218,7 @@ export const googleStart = (req: Request, res: Response) => {
       "Google sign-in could not start:",
       error instanceof Error ? error.message : error,
     );
-    res.redirect(frontendError(returnTo));
+    res.redirect(frontendError(returnTo, "config"));
   }
 };
 
@@ -234,22 +242,36 @@ export const googleCallback = async (req: Request, res: Response) => {
     cookieState === state;
 
   if (oauthError || !code || !stateIsValid) {
-    res.redirect(frontendError(returnTo));
+    if (!oauthError && !cookieState) {
+      // The usual cause is a callback URL on the frontend host that is not
+      // proxied to this API, so the state cookie from the start request was
+      // never sent here.
+      console.warn(
+        "Google callback arrived without the OAuth state cookie. " +
+          `Request host: ${req.get("host")}; GOOGLE_CALLBACK_URL: ` +
+          `${process.env.GOOGLE_CALLBACK_URL || "(derived)"}. If the callback ` +
+          "points at the frontend domain, make sure /api is proxied to this API.",
+      );
+    }
+    res.redirect(frontendError(returnTo, oauthError ? "cancelled" : "state"));
     return;
   }
 
+  let step = "exchange";
   try {
     const idToken = await exchangeCode(code, callbackUrl(req));
-    const user = await findOrCreateGoogleUser(
-      await verifyGoogleIdToken(idToken),
-    );
+    step = "verify";
+    const profile = await verifyGoogleIdToken(idToken);
+    step = "account";
+    const user = await findOrCreateGoogleUser(profile);
+    step = "session";
     issueSession(res, user._id);
     res.redirect(`${frontendUrl()}/dashboard`);
   } catch (error) {
     console.error(
-      "Google sign-in failed:",
+      `Google sign-in failed during ${step}:`,
       error instanceof Error ? error.message : error,
     );
-    res.redirect(frontendError(returnTo));
+    res.redirect(frontendError(returnTo, step));
   }
 };

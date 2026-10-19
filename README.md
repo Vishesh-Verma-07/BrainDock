@@ -175,6 +175,8 @@ Everything stays on one site, which makes the session cookie first-party and avo
 - No `CORS_ORIGINS` entry is needed, since requests are same-origin.
 
 > **Symptom of a mismatched setup:** after choosing a Google account you land on a **404 "This page wandered off"** page at `/api/v1/user/google/callback?...`, and clicking **Go to dashboard** bounces you to `/login`. That means the callback URL points at the frontend host but `/api` is not being proxied to the backend, so the code exchange never happens. Fix it with Option A or Option B above.
+>
+> The callback also reports a coarse `reason` code on the login page. `reason=state` means the browser never sent the short-lived OAuth cookie back to the API — usually because the flow started on one host and the callback landed on another (mixed Option A/B configuration). The backend logs the request host and configured callback URL when this happens; check the Render logs.
 
 Other requirements:
 
