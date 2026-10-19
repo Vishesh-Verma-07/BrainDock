@@ -164,6 +164,8 @@ The current deployment runs the API on Render and the frontend on its own host, 
 - Set `CORS_ORIGINS=https://<your-frontend-domain>` so credentialed requests are allowed.
 - The session cookie is cross-site here. It works in Chrome and Firefox, but Safari's tracking prevention may drop it.
 
+> Safety net: at request time the server compares the host in `GOOGLE_CALLBACK_URL` with the host the browser actually used (including `X-Forwarded-Host` when behind a proxy). If they differ, it logs a warning and derives the callback from the request instead, so a stale value cannot silently break sign-in. Keeping the variable correct is still recommended.
+
 **Option B — proxy the API through the frontend domain (recommended)**
 
 Everything stays on one site, which makes the session cookie first-party and avoids Safari issues.

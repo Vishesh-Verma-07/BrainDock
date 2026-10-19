@@ -1,0 +1,12 @@
+HTTP/1.1 302 Found
+X-Powered-By: Express
+Vary: Origin, Accept
+Access-Control-Allow-Credentials: true
+Set-Cookie: google_oauth_state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwdXJwb3NlIjoiZ29vZ2xlLW9hdXRoIiwicmV0dXJuVG8iOiIvbG9naW4iLCJyZWRpcmVjdFVyaSI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA5OS9hcGkvdjEvdXNlci9nb29nbGUvY2FsbGJhY2siLCJpYXQiOjE3OTI0MjczMDUsImV4cCI6MTc5MjQyNzkwNX0.CW76UTpcqOWBKtWQf_xF8oV549RNuS8wmmkZXAOL_ok; Max-Age=600; Path=/api/v1/user/google; Expires=Mon, 19 Oct 2026 16:38:25 GMT; HttpOnly; SameSite=Lax
+Location: https://accounts.google.com/o/oauth2/v2/auth?client_id=test.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A8099%2Fapi%2Fv1%2Fuser%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+profile&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwdXJwb3NlIjoiZ29vZ2xlLW9hdXRoIiwicmV0dXJuVG8iOiIvbG9naW4iLCJyZWRpcmVjdFVyaSI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA5OS9hcGkvdjEvdXNlci9nb29nbGUvY2FsbGJhY2siLCJpYXQiOjE3OTI0MjczMDUsImV4cCI6MTc5MjQyNzkwNX0.CW76UTpcqOWBKtWQf_xF8oV549RNuS8wmmkZXAOL_ok&access_type=online&prompt=select_account
+Content-Type: text/plain; charset=utf-8
+Content-Length: 559
+Date: Mon, 19 Oct 2026 16:28:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

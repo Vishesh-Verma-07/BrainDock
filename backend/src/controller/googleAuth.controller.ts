@@ -42,10 +42,45 @@ function requireGoogleConfig() {
  * `GOOGLE_CALLBACK_URL` should be set in production; the derived value keeps
  * local development working without extra configuration.
  */
+/**
+ * The redirect URI must exactly match one registered in Google Cloud Console,
+ * and it must lead back to the host the browser used to start the flow —
+ * otherwise the short-lived state cookie is never sent to this API.
+ *
+ * `GOOGLE_CALLBACK_URL` is honoured when its host matches the host the browser
+ * is talking to. If it does not (for example it still points at the frontend
+ * domain after moving the API to another host), the value derived from the
+ * request is used instead and a warning is logged, so a stale variable cannot
+ * silently break sign-in.
+ */
 function callbackUrl(req: Request) {
-  const configured = process.env.GOOGLE_CALLBACK_URL?.trim();
-  if (configured) return configured.replace(/\/+$/, "");
-  return `${req.protocol}://${req.get("host")}/api/v1/user/google/callback`;
+  const requestHost = req.get("host") || "";
+  const forwardedHost =
+    req.get("x-forwarded-host")?.split(",")[0]?.trim() || "";
+  const browserHost = forwardedHost || requestHost;
+  const derived = `${req.protocol}://${browserHost}/api/v1/user/google/callback`;
+
+  const configured = process.env.GOOGLE_CALLBACK_URL?.trim().replace(
+    /\/+$/,
+    "",
+  );
+  if (!configured) return derived;
+
+  let configuredHost = "";
+  try {
+    configuredHost = new URL(configured).host;
+  } catch {
+    configuredHost = "";
+  }
+
+  if (configuredHost && configuredHost === browserHost) return configured;
+
+  console.warn(
+    `GOOGLE_CALLBACK_URL points at "${configuredHost || configured}", but this ` +
+      `request arrived on "${browserHost}". Using ${derived} so the OAuth ` +
+      `state cookie can be returned; update GOOGLE_CALLBACK_URL to match.`,
+  );
+  return derived;
 }
 
 function frontendUrl() {
@@ -64,10 +99,12 @@ function frontendError(returnTo: string, reason: string) {
 }
 
 /** Short-lived signed value that protects the OAuth redirect against CSRF. */
-function createState(returnTo: string) {
-  return jwt.sign({ purpose: "google-oauth", returnTo }, jwtSecret(), {
-    expiresIn: STATE_TTL,
-  });
+function createState(returnTo: string, redirectUri: string) {
+  return jwt.sign(
+    { purpose: "google-oauth", returnTo, redirectUri },
+    jwtSecret(),
+    { expiresIn: STATE_TTL },
+  );
 }
 
 function readState(state: string) {
@@ -76,7 +113,10 @@ function readState(state: string) {
     if (typeof payload === "string" || payload.purpose !== "google-oauth") {
       return null;
     }
-    return payload as jwt.JwtPayload & { returnTo?: string };
+    return payload as jwt.JwtPayload & {
+      returnTo?: string;
+      redirectUri?: string;
+    };
   } catch {
     return null;
   }
@@ -189,12 +229,15 @@ export const googleStart = (req: Request, res: Response) => {
   try {
     const { clientId } = requireGoogleConfig();
 
-    // A signed state carries the page to return to after the callback.
-    const state = createState(returnTo);
+    // A signed state carries the page to return to after the callback, and the
+    // exact redirect URI used for this request so the token exchange can reuse
+    // it even if the host headers differ later.
+    const redirectUri = callbackUrl(req);
+    const state = createState(returnTo, redirectUri);
 
     const params = new URLSearchParams({
       client_id: clientId,
-      redirect_uri: callbackUrl(req),
+      redirect_uri: redirectUri,
       response_type: "code",
       scope: GOOGLE_SCOPES.join(" "),
       state,
@@ -259,7 +302,12 @@ export const googleCallback = async (req: Request, res: Response) => {
 
   let step = "exchange";
   try {
-    const idToken = await exchangeCode(code, callbackUrl(req));
+    const idToken = await exchangeCode(
+      code,
+      typeof statePayload?.redirectUri === "string"
+        ? statePayload.redirectUri
+        : callbackUrl(req),
+    );
     step = "verify";
     const profile = await verifyGoogleIdToken(idToken);
     step = "account";
