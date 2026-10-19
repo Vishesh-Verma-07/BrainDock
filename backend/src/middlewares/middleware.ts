@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { Types } from "mongoose";
-const JWT_SECRETE = "jasdklfjawofnwaeoign";
+import { jwtSecret } from "../utility/session";
 
 declare global {
   namespace Express {
@@ -22,7 +22,7 @@ export function auth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    const decodedInfo = jwt.verify(token as string, JWT_SECRETE) as JwtPayload;
+    const decodedInfo = jwt.verify(token as string, jwtSecret()) as JwtPayload;
 
     if (decodedInfo && typeof decodedInfo !== "string") {
       req.userId = decodedInfo.userId;
@@ -31,8 +31,8 @@ export function auth(req: Request, res: Response, next: NextFunction) {
       res.status(403).json({ message: "Invalid credentials" });
     }
   } catch (error: unknown) {
-
-    const errorMessage = error instanceof Error ? error.message : "auth failed "
+    const errorMessage =
+      error instanceof Error ? error.message : "auth failed ";
 
     res.status(403).json({ message: "Invalid token", error: errorMessage });
   }

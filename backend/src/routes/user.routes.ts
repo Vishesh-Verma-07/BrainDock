@@ -8,6 +8,10 @@ import {
   updateUser,
 } from "../controller/user.controller";
 import { auth } from "../middlewares/middleware";
+import {
+  googleCallback,
+  googleStart,
+} from "../controller/googleAuth.controller";
 
 const userRouter = Router();
 userRouter.get("/", (req, res) => {
@@ -17,6 +21,11 @@ userRouter.get("/", (req, res) => {
 userRouter.post("/signup", signup);
 
 userRouter.post("/signin", signin);
+
+userRouter.get("/google", googleStart);
+
+userRouter.get("/google/callback", googleCallback);
+
 userRouter.post("/signout", signout);
 
 userRouter.get("/getUser", auth, getUser);

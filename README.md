@@ -15,6 +15,7 @@ Live deployment: [secondbrain.visheshxdevs.in](https://secondbrain.visheshxdevs.
 ## Features
 
 - Account registration and sign-in with JWT-backed HTTP-only cookies
+- Sign in / sign up with Google (OAuth 2.0, server-side code exchange)
 - Save notes, links, and supported YouTube videos
 - Organise saved items with collections and tags
 - Browse, filter, sort, inspect, and delete saved content
@@ -29,7 +30,7 @@ Live deployment: [secondbrain.visheshxdevs.in](https://secondbrain.visheshxdevs.
 - **Backend:** Node.js, Express, TypeScript, Zod
 - **Data:** MongoDB, Mongoose, Pinecone vector database
 - **AI:** Google Gemini, LangChain
-- **Authentication:** JSON Web Tokens, bcrypt, cookie-parser
+- **Authentication:** JSON Web Tokens, bcrypt, cookie-parser, Google OAuth 2.0
 - **DevOps:** Docker, Docker Compose, Kubernetes, GitHub Actions
 - **Code quality:** ESLint, Prettier
 
@@ -106,6 +107,12 @@ PORT=8080
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
 JWT_SECRETE=replace-with-a-long-random-secret
 
+# Google sign-in (Google Cloud Console → APIs & Services → Credentials)
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:8080/api/v1/user/google/callback
+FRONTEND_URL=http://localhost:3000
+
 # Google Gemini
 GEMINI_API_KEY=your-gemini-api-key
 
@@ -122,6 +129,40 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 ```
 
 `NEXT_PUBLIC_API_URL` is embedded into the Next.js client at build time. Do not put secrets in frontend environment variables. The repository's existing backend environment also includes Google service-account variables; they are not used by the current application source.
+
+## Google Sign-In Setup
+
+Google sign-in uses the OAuth 2.0 authorization-code flow. The browser is redirected to Google, Google redirects back to the backend, the backend exchanges the code (using the client secret, which never reaches the browser), creates or links the user, sets the usual http-only session cookie, and then redirects to `/dashboard`.
+
+1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials).
+2. Configure the **OAuth consent screen** (External, app name, support email, developer email).
+3. Click **Create credentials → OAuth client ID**, choose **Web application**.
+4. Add **Authorized redirect URIs** — one per environment. They must match exactly, including scheme, host, port, and path:
+   - Local: `http://localhost:8080/api/v1/user/google/callback`
+   - Production: `https://<your-domain>/api/v1/user/google/callback`
+5. Add **Authorized JavaScript origins** for the frontend host (not required by this server-side flow, but harmless): `http://localhost:3000`, `https://<your-domain>`.
+6. Copy the client ID and client secret into `backend/.env`:
+
+   ```env
+   GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_CALLBACK_URL=http://localhost:8080/api/v1/user/google/callback
+   FRONTEND_URL=http://localhost:3000
+   ```
+
+7. Restart the backend. The **Continue with Google** button now appears on `/login` and `/signup`.
+
+### Production notes
+
+The current deployment runs the API on Render and the frontend on its own host, so the two are different sites. Two values must therefore be set carefully:
+
+- `GOOGLE_CALLBACK_URL` must be the **backend's** public URL, i.e. the Render service URL — not the frontend domain. It must also be listed verbatim in Google Cloud Console → **Authorized redirect URIs**. Example: `https://<your-service>.onrender.com/api/v1/user/google/callback`.
+- `FRONTEND_URL` must be the frontend's public URL, because the backend redirects the browser there after a successful login (and back to `/login?error=google` on failure).
+- Render sets `NODE_ENV=production` automatically at runtime. In that mode the session cookie is issued with `Secure; SameSite=None`, which is required for the cross-site cookie to be sent from the frontend origin, and `JWT_SECRETE` must be present or the server refuses to start.
+- The frontend origin must be in `allowedOrigins` in `backend/src/index.ts` (CORS with credentials), or added through the `CORS_ORIGINS` environment variable (comma separated).
+- Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`, and `FRONTEND_URL` to the Render environment variables. `GOOGLE_CALLBACK_URL` and `FRONTEND_URL` can also live in `kubernetes/backend/config.yml` for the Kubernetes manifests, which use the ingress domain instead of Render.
+- Because the frontend and API are on different sites, Safari's tracking prevention may block the session cookie. Serving the API from the same site as the frontend (for example a Vercel rewrite of `/api/*` to the Render service, with `NEXT_PUBLIC_API_URL=/api/v1`) makes the cookie first-party and avoids this.
+- Accounts created with Google have no password. Signing in with a password for such an account returns a message pointing the user to Google. Existing password accounts are linked automatically the first time the user signs in with the same verified Google email.
 
 ## Usage
 

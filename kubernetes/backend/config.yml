@@ -8,3 +8,5 @@ metadata:
 data: 
   NODE_ENV: production
   PORT: "8080"
+  GOOGLE_CALLBACK_URL: "https://secondbrain.visheshxdevs.in/api/v1/user/google/callback"
+  FRONTEND_URL: "https://secondbrain.visheshxdevs.in"

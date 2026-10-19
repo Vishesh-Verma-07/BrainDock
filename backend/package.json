@@ -29,6 +29,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "fastembed": "^1.14.4",
+    "google-auth-library": "^11.3.1",
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.3.34",
     "ml-pca": "^4.1.1",

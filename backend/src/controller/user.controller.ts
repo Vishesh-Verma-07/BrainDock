@@ -2,9 +2,9 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { UserModel } from "../models/index";
 import { apiResponse, sendResponse } from "../utility/sendResponse";
+import { issueSession, sessionCookieOptions } from "../utility/session";
 
 export const signup = async (req: Request, res: Response) => {
   // console.log(req.body);
@@ -63,9 +63,9 @@ export const signup = async (req: Request, res: Response) => {
       message: "User created successfully",
       data: user,
     });
-  } catch (error : unknown) {
-
-    const errorMessage = error instanceof Error ? error.message : "singup failed "
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "singup failed ";
 
     res.status(500).json({
       message: "something went wrong during db entry",
@@ -90,7 +90,8 @@ export const signin = async (req: Request, res: Response) => {
 
   if (!user.password) {
     res.status(403).json({
-      message: "User does not have password",
+      message:
+        "This account uses Google sign-in. Continue with Google instead.",
     });
     return;
   }
@@ -114,36 +115,22 @@ export const signin = async (req: Request, res: Response) => {
     return;
   }
 
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRETE);
+  issueSession(res, user._id);
 
-  const options = {
-    httpOnly: true,
-    secure: true, // Set to true if using HTTPS
-    sameSite: "none" as const, // Using type assertion to specify literal type
-    // maxAge: 24 * 60 * 60 * 1000 // 1 day
-  };
-
-  res
-    .status(200)
-    .cookie("token", token, options)
-    .json(
-      new apiResponse(200, {
-        user: {
-          id: user._id,
-          email: user.email,
-        },
-      }),
-    );
+  res.status(200).json(
+    new apiResponse(200, {
+      user: {
+        id: user._id,
+        email: user.email,
+      },
+    }),
+  );
   return;
 };
 
 export const signout = (_req: Request, res: Response) => {
   res
-    .clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    })
+    .clearCookie("token", sessionCookieOptions())
     .json({ message: "Signed out successfully" });
 };
 
@@ -169,7 +156,8 @@ export const getUser = async (req: Request, res: Response) => {
 
     res.json(user);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "getting the user failed"
+    const errorMessage =
+      error instanceof Error ? error.message : "getting the user failed";
 
     res.status(500).json({
       message: errorMessage,

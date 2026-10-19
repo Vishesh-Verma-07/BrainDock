@@ -13,8 +13,17 @@ const User = new Schema(
       unique: true,
     },
     password: {
+      // Optional: accounts created through Google sign-in have no password.
       type: String,
-      required: true,
+      required: false,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    profileImage: {
+      type: String,
     },
     content: [
       {
